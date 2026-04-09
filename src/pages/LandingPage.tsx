@@ -30,20 +30,18 @@ function Hero() {
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="https://wa.me/5511999999999?text=Quero%20testar%20o%20PrecificaAuto"
-              target="_blank"
-              rel="noopener"
+            <Link
+              to="/chat"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-brand-600 text-white font-semibold rounded-xl hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/25 hover:shadow-xl hover:shadow-brand-600/30 hover:-translate-y-0.5"
             >
               <MessageSquare className="w-5 h-5" />
-              3 consultas gratis no WhatsApp
-            </a>
+              Testar no WhatsApp (demo)
+            </Link>
             <Link
-              to="/dashboard"
+              to="/chat"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-gray-700 font-semibold rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all"
             >
-              Ver demo
+              Ver demo interativa
               <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
@@ -320,21 +318,12 @@ function CTA() {
           Comece agora pelo WhatsApp.
         </p>
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-          <a
-            href="https://wa.me/5511999999999?text=Quero%20testar%20o%20PrecificaAuto"
-            target="_blank"
-            rel="noopener"
+          <Link
+            to="/chat"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-brand-700 font-bold rounded-xl hover:bg-brand-50 transition-all shadow-lg"
           >
             <MessageSquare className="w-5 h-5" />
-            Testar gratis no WhatsApp
-          </a>
-          <Link
-            to="/dashboard"
-            className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 transition-all"
-          >
-            <TrendingUp className="w-5 h-5" />
-            Ver demo interativa
+            Abrir simulador WhatsApp
           </Link>
         </div>
       </div>

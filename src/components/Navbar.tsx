@@ -4,11 +4,7 @@ import { Menu, X, Car } from 'lucide-react'
 
 const navLinks = [
   { to: '/', label: 'Inicio' },
-  { to: '/dashboard', label: 'Dashboard' },
-  { to: '/precificador', label: 'Precificador' },
-  { to: '/checklist', label: 'Checklist' },
-  { to: '/buscador', label: 'Buscador' },
-  { to: '/rede', label: 'Rede' },
+  { to: '/chat', label: 'Simulador WhatsApp' },
 ]
 
 export default function Navbar() {
@@ -51,14 +47,12 @@ export default function Navbar() {
             >
               Planos
             </a>
-            <a
-              href="https://wa.me/5511999999999?text=Quero%20testar%20o%20PrecificaAuto"
-              target="_blank"
-              rel="noopener"
+            <Link
+              to="/chat"
               className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 transition-colors"
             >
               Testar gratis
-            </a>
+            </Link>
           </div>
 
           <button
