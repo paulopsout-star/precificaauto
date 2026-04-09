@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import {
   Car, BarChart3, Shield, Search, Users, Zap, MessageSquare,
-  ArrowRight, Check, Minus, ChevronRight, Clock, TrendingUp, Bell
+  ArrowRight, Check, Minus, ChevronRight, Clock, Bell
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'

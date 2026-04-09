@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import {
   Search, Plus, Bell, Pause, Play, Trash2, MapPin, Calendar,
-  Gauge, DollarSign, Clock, Filter, ExternalLink
+  Gauge, Clock, Filter, ExternalLink
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
-import VerdictBadge from '../components/VerdictBadge'
 import { MOCK_INTENTS, MOCK_NETWORK, type PurchaseIntent, type NetworkVehicle } from '../data/mockData'
 
 function formatCurrency(v: number) {

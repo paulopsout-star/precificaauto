@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { processMessage, resetBotState, getBotState, type Message, type VehicleData, type ChecklistData, type MatchData, type IntentData, type RedeVehicle } from '../data/botEngine'
-import { Send, Mic, Paperclip, Phone, Video, MoreVertical, ArrowLeft, Car, Check, CheckCheck } from 'lucide-react'
+import { Send, Mic, Paperclip, Phone, Video, MoreVertical, ArrowLeft, Car, CheckCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 function formatCurrency(v: number) {
@@ -428,7 +428,8 @@ export default function WhatsAppChat() {
     inputRef.current?.focus()
   }
 
-  const botState = getBotState()
+  // Keep getBotState available for future use
+  void getBotState
 
   return (
     <div className="h-screen flex flex-col bg-gray-100">
