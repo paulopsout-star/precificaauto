@@ -170,11 +170,42 @@ for (const plate of Object.keys(VEHICLES_DB)) {
   }
 }
 
-const MATCH_ALERTS: MatchData[] = [
-  { vehicle: 'HB20 1.6 Vision 2022', seller: 'Auto Loja Premium', city: 'Campinas - SP', price: 69900, source: 'Rede PrecificaAuto', priceScore: 78, liquidityScore: 82, km: 32000, year: 2022 },
-  { vehicle: 'Corolla XEi 2.0 2022', seller: 'Canal do Repasse', city: 'Sao Paulo - SP', price: 126000, source: 'Canal do Repasse', priceScore: 71, liquidityScore: 88, km: 28000, year: 2022 },
-  { vehicle: 'Pulse Drive 1.3 2023', seller: 'Veiculos do Sul', city: 'Curitiba - PR', price: 89500, source: 'Rede PrecificaAuto', priceScore: 82, liquidityScore: 79, km: 18000, year: 2023 },
+// Banco de veiculos disponiveis para match — cada um com marca/modelo/ano/km/preco/scores
+const AVAILABLE_STOCK: (MatchData & { brand: string; model: string })[] = [
+  { brand: 'Hyundai', model: 'HB20', vehicle: 'HB20 1.6 Vision 2022', seller: 'Auto Loja Premium', city: 'Campinas - SP', price: 69900, source: 'Rede PrecificaAuto', priceScore: 78, liquidityScore: 82, km: 32000, year: 2022 },
+  { brand: 'Hyundai', model: 'HB20', vehicle: 'HB20 1.0 Sense 2021', seller: 'Canal do Repasse', city: 'Ribeirao Preto - SP', price: 64500, source: 'Canal do Repasse', priceScore: 74, liquidityScore: 80, km: 48000, year: 2021 },
+  { brand: 'Hyundai', model: 'HB20', vehicle: 'HB20 1.0 Evolution 2023', seller: 'Veiculos Express', city: 'Sorocaba - SP', price: 76900, source: 'OLX', priceScore: 68, liquidityScore: 77, km: 22000, year: 2023 },
+  { brand: 'Honda', model: 'Civic', vehicle: 'Civic EXL 2.0 CVT 2020', seller: 'Premium Autos', city: 'Sao Paulo - SP', price: 102000, source: 'Canal do Repasse', priceScore: 71, liquidityScore: 65, km: 51000, year: 2020 },
+  { brand: 'Honda', model: 'Civic', vehicle: 'Civic Touring 1.5T 2021', seller: 'Top Car', city: 'Campinas - SP', price: 128000, source: 'Rede PrecificaAuto', priceScore: 66, liquidityScore: 72, km: 38000, year: 2021 },
+  { brand: 'Toyota', model: 'Corolla', vehicle: 'Corolla XEi 2.0 2022', seller: 'Canal do Repasse', city: 'Sao Paulo - SP', price: 126000, source: 'Canal do Repasse', priceScore: 71, liquidityScore: 88, km: 28000, year: 2022 },
+  { brand: 'Toyota', model: 'Corolla', vehicle: 'Corolla GLi 2.0 2021', seller: 'Auto Show', city: 'Curitiba - PR', price: 112000, source: 'Webmotors', priceScore: 75, liquidityScore: 85, km: 42000, year: 2021 },
+  { brand: 'Fiat', model: 'Pulse', vehicle: 'Pulse Drive 1.3 CVT 2023', seller: 'Veiculos do Sul', city: 'Curitiba - PR', price: 89500, source: 'Rede PrecificaAuto', priceScore: 82, liquidityScore: 79, km: 18000, year: 2023 },
+  { brand: 'Fiat', model: 'Argo', vehicle: 'Argo Drive 1.3 2022', seller: 'Fiat Premium', city: 'Belo Horizonte - MG', price: 68000, source: 'OLX', priceScore: 70, liquidityScore: 73, km: 35000, year: 2022 },
+  { brand: 'Volkswagen', model: 'Gol', vehicle: 'Gol 1.6 MSI 2020', seller: 'VW Seminovos', city: 'Sao Paulo - SP', price: 52000, source: 'Canal do Repasse', priceScore: 69, liquidityScore: 66, km: 55000, year: 2020 },
+  { brand: 'Chevrolet', model: 'Onix', vehicle: 'Onix Premier 1.0T 2023', seller: 'GM Select', city: 'Rio de Janeiro - RJ', price: 82000, source: 'Webmotors', priceScore: 74, liquidityScore: 90, km: 22000, year: 2023 },
+  { brand: 'Chevrolet', model: 'Tracker', vehicle: 'Tracker Premier 1.2T 2022', seller: 'Auto Center', city: 'Campinas - SP', price: 118000, source: 'Rede PrecificaAuto', priceScore: 72, liquidityScore: 78, km: 30000, year: 2022 },
+  { brand: 'Hyundai', model: 'Creta', vehicle: 'Creta Prestige 2.0 2022', seller: 'Canal do Repasse', city: 'Goiania - GO', price: 112000, source: 'Canal do Repasse', priceScore: 76, liquidityScore: 81, km: 27000, year: 2022 },
+  { brand: 'Nissan', model: 'Kicks', vehicle: 'Kicks Exclusive CVT 2023', seller: 'Nissan Premium', city: 'Brasilia - DF', price: 105000, source: 'OLX', priceScore: 73, liquidityScore: 77, km: 20000, year: 2023 },
+  { brand: 'Honda', model: 'HR-V', vehicle: 'HR-V EXL CVT 2021', seller: 'Honda Place', city: 'Florianopolis - SC', price: 119000, source: 'Rede PrecificaAuto', priceScore: 70, liquidityScore: 75, km: 45000, year: 2021 },
 ]
+
+// Filtra veiculos compativeis com a intencao, respeitando TODAS as regras de negocio
+function findMatchesForIntent(intent: IntentData, minScore: number = 65): (MatchData & { brand: string; model: string })[] {
+  return AVAILABLE_STOCK.filter((v) => {
+    // Modelo deve ser compativel
+    if (intent.model && v.model.toUpperCase() !== intent.model.toUpperCase()) return false
+    // Ano dentro da faixa
+    if (v.year < intent.yearMin || v.year > intent.yearMax) return false
+    // KM dentro do limite
+    if (v.km > intent.kmMax) return false
+    // Preco dentro do limite
+    if (v.price > intent.priceMax) return false
+    // Score total (media de preco + liquidez) deve ser >= minimo configurado (padrao 65)
+    const avgScore = Math.round((v.priceScore + v.liquidityScore) / 2)
+    if (avgScore < minScore) return false
+    return true
+  })
+}
 
 type BotState = {
   freeQueries: number
@@ -186,6 +217,10 @@ type BotState = {
   pendingData: any
   onboarded: boolean
   lastPlate: string | null
+}
+
+function formatCurrency(v: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(v)
 }
 
 let state: BotState = {
@@ -303,10 +338,10 @@ export function processMessage(text: string): Message[] {
   if (!state.onboarded && (lower === 'oi' || lower === 'ola' || lower === 'bom dia' || lower === 'boa tarde' || lower === 'hey' || lower === 'inicio' || lower === 'comecar')) {
     state.onboarded = true
     responses.push(msg('text',
-      `Ola! Bem-vindo ao *PrecificaAuto* 🚗\n\nSou seu assistente de decisao para compra de veiculos usados.\n\nVoce tem *3 consultas gratis* para testar. Veja o que posso fazer:`
+      `Ola! Eu sou a *PrecificaAuto* 🚗\n\nSua assistente de compra e buscadora de veiculos usados.\n\nVoce tem *3 consultas gratis*. Escolha o que deseja fazer:`
     ))
     responses.push(msg('text',
-      `📊 *Precificador* — envie uma placa ou descreva o veiculo\n🔍 *Checklist* — digite "checklist ABC1D23"\n🔔 *Buscador* — digite "quero HB20 2021+"\n🤝 *Rede* — digite "tenho Civic 2020, 52k km, R$ 98k"\n📋 *Planos* — digite "planos"\n\nComece enviando uma *placa* para testar!`
+      `💰 *Consulta Preco* — envie a placa ou descreva o veiculo\nEx: _ABC1D23_ ou _HB20 2021_\n\n🔎 *Busca Estoque* — diga o que procura\nEx: _quero HB20 2021+, ate 60k km_\n\n📦 *Cadastrar Veiculo* — informe o que tem para repasse\nEx: _tenho Civic 2020, 52k km, R$ 98k_\n\n📋 *Planos* — digite _planos_\n❓ *Ajuda* — digite _ajuda_`
     ))
     return responses
   }
@@ -319,14 +354,25 @@ export function processMessage(text: string): Message[] {
   // Handle confirmation states
   if (state.awaitingConfirmation === 'intent') {
     if (lower === 'sim' || lower === 'confirmar' || lower === 's' || lower === '1') {
-      state.intents.push(state.pendingData)
+      const intent = state.pendingData as IntentData
+      state.intents.push(intent)
       state.awaitingConfirmation = null
       state.pendingData = null
-      responses.push(msg('text', `✅ *Intencao cadastrada com sucesso!*\n\nVou monitorar Canal do Repasse, OLX, Webmotors e iCarros a cada 2-4h.\n\nQuando encontrar um veiculo compativel com score >= 65, envio o card completo aqui.\n\nTTL: 30 dias. Para renovar, e so pedir.`))
-      // Simulate a match after a few seconds
-      responses.push(msg('text', `🔔 Ja encontrei *${Math.floor(Math.random() * 3) + 1} veiculos* compativeis na ultima varredura! Enviando o melhor match...`))
-      const match = MATCH_ALERTS[Math.floor(Math.random() * MATCH_ALERTS.length)]
-      responses.push(msg('card-match', undefined, match))
+
+      // Buscar matches compativeis com a intencao (regras de negocio)
+      const matches = findMatchesForIntent(intent)
+
+      if (matches.length > 0) {
+        responses.push(msg('text', `✅ *Intencao cadastrada!*\n\nJa fiz a primeira varredura no Canal do Repasse, OLX, Webmotors e Rede PrecificaAuto.\n\n🔔 Encontrei *${matches.length} veiculo${matches.length > 1 ? 's' : ''}* compativel${matches.length > 1 ? 'is' : ''} com seus criterios! Enviando o melhor match...`))
+        // Enviar o match com maior score (melhor oportunidade)
+        const bestMatch = matches.sort((a, b) => (b.priceScore + b.liquidityScore) - (a.priceScore + a.liquidityScore))[0]
+        responses.push(msg('card-match', undefined, bestMatch))
+        if (matches.length > 1) {
+          responses.push(msg('text', `Tambem encontrei mais ${matches.length - 1} opcao${matches.length - 1 > 1 ? 'oes' : ''} compativel${matches.length - 1 > 1 ? 'is' : ''}. Enviarei alertas a cada 2-4h quando novos veiculos aparecerem.\n\nTTL: 30 dias. Para renovar, e so pedir.`))
+        }
+      } else {
+        responses.push(msg('text', `✅ *Intencao cadastrada!*\n\nAinda nao encontrei veiculos compativeis com todos os seus criterios.\n\nVou monitorar Canal do Repasse, OLX, Webmotors e Rede PrecificaAuto a cada 2-4h. Quando encontrar um *${intent.model}* ${intent.yearMin}+ com ate ${(intent.kmMax / 1000).toFixed(0)}k km e ate ${formatCurrency(intent.priceMax)}, com score >= 65, envio o card aqui.\n\nTTL: 30 dias.`))
+      }
       return responses
     } else if (lower === 'nao' || lower === 'cancelar' || lower === 'n' || lower === '2') {
       state.awaitingConfirmation = null
@@ -360,7 +406,7 @@ export function processMessage(text: string): Message[] {
   // Help
   if (lower === 'ajuda' || lower === 'help' || lower === 'menu' || lower === '?') {
     responses.push(msg('text',
-      `*Comandos disponiveis:*\n\n📊 Envie uma *placa* (ex: ABC1D23) — analise de preco\n🔍 *checklist* + placa — verificar pendencias\n🔔 *quero* + descricao — cadastrar intencao de compra\n🤝 *tenho* + descricao — cadastrar veiculo para repasse\n📋 *planos* — ver planos e precos\n📊 *resumo* — resumo mensal\n❓ *ajuda* — este menu\n\nPlacas de teste: ABC1D23, XYZ4E56, DEF7G89, GHI8J01, JKL2M34`
+      `*O que posso fazer por voce:*\n\n💰 *Consulta Preco* — envie uma placa ou descreva o veiculo\n🔎 *Busca Estoque* — _quero_ + o que procura\n📦 *Cadastrar Veiculo* — _tenho_ + detalhes do carro\n🔍 *Checklist Documental* — _checklist_ + placa\n📋 *Planos e precos* — _planos_\n📊 *Resumo da conta* — _resumo_\n\nPlacas de teste: ABC1D23, XYZ4E56, DEF7G89, GHI8J01, JKL2M34`
     ))
     return responses
   }
@@ -510,7 +556,7 @@ export function processMessage(text: string): Message[] {
 
   // Fallback
   responses.push(msg('text',
-    `Nao entendi. Tente uma dessas opcoes:\n\n📊 Envie uma *placa* — ex: ABC1D23\n🔍 *checklist ABC1D23*\n🔔 *quero HB20 2021+*\n🤝 *tenho Civic 2020, 52k km, R$ 98k*\n📋 *planos*\n❓ *ajuda*`
+    `Nao entendi 😅 Tente assim:\n\n💰 *Consulta Preco* — envie uma placa (ex: _ABC1D23_)\n🔎 *Busca Estoque* — _quero HB20 2021+_\n📦 *Cadastrar Veiculo* — _tenho Civic 2020, 52k km, R$ 98k_\n\nOu digite *ajuda* para ver todas as opcoes.`
   ))
 
   return responses

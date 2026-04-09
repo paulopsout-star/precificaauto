@@ -342,21 +342,21 @@ function MessageBubble({ message }: { message: Message }) {
 // ─── Quick Action Chips ───
 function QuickChips({ onSend }: { onSend: (text: string) => void }) {
   const chips = [
-    'ABC1D23', 'XYZ4E56', 'DEF7G89',
-    'checklist ABC1D23',
-    'quero HB20 2021+',
-    'tenho Civic 2020, 52k km, R$ 98k',
-    'planos', 'ajuda',
+    { label: '💰 Consulta Preco', value: 'ABC1D23' },
+    { label: '🔎 Busca Estoque', value: 'quero HB20 2021+' },
+    { label: '📦 Cadastrar Veiculo', value: 'tenho Civic 2020, 52k km, R$ 98k' },
+    { label: '🔍 Checklist', value: 'checklist ABC1D23' },
+    { label: '📋 Planos', value: 'planos' },
   ]
   return (
     <div className="flex gap-1.5 flex-wrap px-3 py-2">
       {chips.map((c) => (
         <button
-          key={c}
-          onClick={() => onSend(c)}
-          className="px-2.5 py-1 bg-white border border-brand-200 text-brand-700 text-[11px] rounded-full hover:bg-brand-50 transition-colors whitespace-nowrap"
+          key={c.label}
+          onClick={() => onSend(c.value)}
+          className="px-3 py-1.5 bg-white border border-brand-200 text-brand-700 text-[12px] rounded-full hover:bg-brand-50 transition-colors whitespace-nowrap font-medium"
         >
-          {c}
+          {c.label}
         </button>
       ))}
     </div>
@@ -443,10 +443,7 @@ export default function WhatsAppChat() {
         <div className="flex-1">
           <p className="text-sm font-semibold">PrecificaAuto</p>
           <p className="text-[11px] text-green-200">
-            {botState.plan === 'free'
-              ? `${botState.freeQueries} consultas gratis restantes`
-              : `Plano ${botState.plan} · ${botState.queriesUsed} consultas usadas`
-            }
+            Assistente de compra e busca de veiculos
           </p>
         </div>
         <div className="flex items-center gap-4">
