@@ -1,9 +1,15 @@
+export interface ButtonOption {
+  label: string
+  value: string
+}
+
 export interface Message {
   id: string
   from: 'user' | 'bot'
-  type: 'text' | 'card-pricing' | 'card-checklist' | 'card-alert' | 'card-match' | 'card-plans' | 'card-summary' | 'card-intent-confirm' | 'card-rede' | 'typing'
+  type: 'text' | 'card-pricing' | 'card-checklist' | 'card-alert' | 'card-match' | 'card-plans' | 'card-summary' | 'card-intent-confirm' | 'card-rede' | 'buttons' | 'typing'
   text?: string
   data?: any
+  buttons?: ButtonOption[]
   timestamp: Date
 }
 
@@ -325,12 +331,13 @@ export function processMessage(text: string): Message[] {
   const responses: Message[] = []
   const lower = text.toLowerCase().trim()
 
-  const msg = (type: Message['type'], content?: string, data?: any): Message => ({
+  const msg = (type: Message['type'], content?: string, data?: any, buttons?: ButtonOption[]): Message => ({
     id: String(Date.now() + Math.random()),
     from: 'bot',
-    type,
+    type: buttons ? 'buttons' : type,
     text: content,
     data,
+    buttons,
     timestamp: new Date(),
   })
 
@@ -340,8 +347,15 @@ export function processMessage(text: string): Message[] {
     responses.push(msg('text',
       `Ola! Eu sou a *PrecificaAuto* 🚗\n\nSua assistente de compra e buscadora de veiculos usados.\n\nVoce tem *3 consultas gratis*. Escolha o que deseja fazer:`
     ))
-    responses.push(msg('text',
-      `💰 *Consulta Preco* — envie a placa ou descreva o veiculo\nEx: _ABC1D23_ ou _HB20 2021_\n\n🔎 *Busca Estoque* — diga o que procura\nEx: _quero HB20 2021+, ate 60k km_\n\n📦 *Cadastrar Veiculo* — informe o que tem para repasse\nEx: _tenho Civic 2020, 52k km, R$ 98k_\n\n📋 *Planos* — digite _planos_\n❓ *Ajuda* — digite _ajuda_`
+    responses.push(msg('buttons',
+      `O que voce precisa?`,
+      undefined,
+      [
+        { label: '💰 Consultar Preco', value: 'ABC1D23' },
+        { label: '🔎 Buscar Estoque', value: 'quero HB20 2021+, ate 60k km' },
+        { label: '📦 Cadastrar Veiculo', value: 'tenho Civic 2020, 52k km, R$ 98k' },
+        { label: '📋 Ver Planos', value: 'planos' },
+      ]
     ))
     return responses
   }
@@ -363,21 +377,30 @@ export function processMessage(text: string): Message[] {
       const matches = findMatchesForIntent(intent)
 
       if (matches.length > 0) {
-        responses.push(msg('text', `✅ *Intencao cadastrada!*\n\nJa fiz a primeira varredura no Canal do Repasse, OLX, Webmotors e Rede PrecificaAuto.\n\n🔔 Encontrei *${matches.length} veiculo${matches.length > 1 ? 's' : ''}* compativel${matches.length > 1 ? 'is' : ''} com seus criterios! Enviando o melhor match...`))
-        // Enviar o match com maior score (melhor oportunidade)
+        responses.push(msg('text', `✅ *Intencao cadastrada!*\n\nJa fiz a primeira varredura no Canal do Repasse, OLX, Webmotors e Rede PrecificaAuto.\n\n🔔 Encontrei *${matches.length} veiculo${matches.length > 1 ? 's' : ''}* compativel${matches.length > 1 ? 'is' : ''} com seus criterios!`))
         const bestMatch = matches.sort((a, b) => (b.priceScore + b.liquidityScore) - (a.priceScore + a.liquidityScore))[0]
         responses.push(msg('card-match', undefined, bestMatch))
         if (matches.length > 1) {
-          responses.push(msg('text', `Tambem encontrei mais ${matches.length - 1} opcao${matches.length - 1 > 1 ? 'oes' : ''} compativel${matches.length - 1 > 1 ? 'is' : ''}. Enviarei alertas a cada 2-4h quando novos veiculos aparecerem.\n\nTTL: 30 dias. Para renovar, e so pedir.`))
+          responses.push(msg('buttons', `Mais ${matches.length - 1} opcao${matches.length - 1 > 1 ? 'oes' : ''} compativel${matches.length - 1 > 1 ? 'is' : ''}. Alertas a cada 2-4h.\nValidade: 30 dias.`, undefined, [
+            { label: '💰 Nova consulta', value: 'ABC1D23' },
+            { label: '📋 Ver planos', value: 'planos' },
+          ]))
         }
       } else {
-        responses.push(msg('text', `✅ *Intencao cadastrada!*\n\nAinda nao encontrei veiculos compativeis com todos os seus criterios.\n\nVou monitorar Canal do Repasse, OLX, Webmotors e Rede PrecificaAuto a cada 2-4h. Quando encontrar um *${intent.model}* ${intent.yearMin}+ com ate ${(intent.kmMax / 1000).toFixed(0)}k km e ate ${formatCurrency(intent.priceMax)}, com score >= 65, envio o card aqui.\n\nTTL: 30 dias.`))
+        responses.push(msg('buttons', `✅ *Intencao cadastrada!*\n\nAinda nao encontrei veiculos compativeis. Vou monitorar a cada 2-4h e aviso quando encontrar um *${intent.model}* dentro dos seus criterios.\n\nValidade: 30 dias.`, undefined, [
+          { label: '💰 Consultar preco', value: 'ABC1D23' },
+          { label: '🔎 Nova busca', value: 'quero Corolla 2021+' },
+        ]))
       }
       return responses
     } else if (lower === 'nao' || lower === 'cancelar' || lower === 'n' || lower === '2') {
       state.awaitingConfirmation = null
       state.pendingData = null
-      responses.push(msg('text', 'Ok, intencao cancelada. Me diga o que procura quando quiser.'))
+      responses.push(msg('buttons', 'Ok, busca cancelada.', undefined, [
+        { label: '💰 Consultar preco', value: 'ABC1D23' },
+        { label: '🔎 Buscar estoque', value: 'quero HB20 2021+' },
+        { label: '❓ Ajuda', value: 'ajuda' },
+      ]))
       return responses
     }
   }
@@ -387,12 +410,19 @@ export function processMessage(text: string): Message[] {
       state.redeVehicles.push(state.pendingData)
       state.awaitingConfirmation = null
       state.pendingData = null
-      responses.push(msg('text', `✅ *Veiculo cadastrado na rede!*\n\nSeu carro ficara visivel apenas para compradores com intencao de compra compativel — nao e anuncio publico.\n\nQuando houver match, ambas as partes serao notificadas simultaneamente aqui no WhatsApp.\n\nTTL: 30 dias.`))
+      responses.push(msg('buttons', `✅ *Veiculo cadastrado na rede!*\n\nVisivel apenas para compradores compativeis. Ambas as partes notificadas no WhatsApp.\n\nValidade: 30 dias.`, undefined, [
+        { label: '📦 Cadastrar outro', value: 'tenho Corolla 2021, 35k km, R$ 120k' },
+        { label: '💰 Consultar preco', value: 'ABC1D23' },
+        { label: '📊 Meu resumo', value: 'resumo' },
+      ]))
       return responses
     } else if (lower === 'nao' || lower === 'cancelar' || lower === 'n' || lower === '2') {
       state.awaitingConfirmation = null
       state.pendingData = null
-      responses.push(msg('text', 'Ok, cadastro cancelado.'))
+      responses.push(msg('buttons', 'Ok, cadastro cancelado.', undefined, [
+        { label: '💰 Consultar preco', value: 'ABC1D23' },
+        { label: '🔎 Buscar estoque', value: 'quero HB20 2021+' },
+      ]))
       return responses
     }
   }
@@ -400,14 +430,25 @@ export function processMessage(text: string): Message[] {
   // Plans
   if (lower === 'planos' || lower === 'precos' || lower === 'preco' || lower === 'plano' || lower === 'assinar') {
     responses.push(msg('card-plans'))
+    responses.push(msg('buttons', 'Qual plano deseja ativar?', undefined, [
+      { label: '⭐ Starter — R$ 97', value: 'assinar starter' },
+      { label: '🏆 Pro — R$ 197', value: 'assinar pro' },
+      { label: '🏢 Loja — R$ 397', value: 'assinar loja' },
+    ]))
     return responses
   }
 
   // Help
   if (lower === 'ajuda' || lower === 'help' || lower === 'menu' || lower === '?') {
     responses.push(msg('text',
-      `*O que posso fazer por voce:*\n\n💰 *Consulta Preco* — envie uma placa ou descreva o veiculo\n🔎 *Busca Estoque* — _quero_ + o que procura\n📦 *Cadastrar Veiculo* — _tenho_ + detalhes do carro\n🔍 *Checklist Documental* — _checklist_ + placa\n📋 *Planos e precos* — _planos_\n📊 *Resumo da conta* — _resumo_\n\nPlacas de teste: ABC1D23, XYZ4E56, DEF7G89, GHI8J01, JKL2M34`
+      `*O que posso fazer por voce:*\n\n💰 *Consulta Preco* — envie uma placa ou descreva o veiculo\n🔎 *Busca Estoque* — _quero_ + o que procura\n📦 *Cadastrar Veiculo* — _tenho_ + detalhes do carro\n🔍 *Checklist Documental* — _checklist_ + placa\n📋 *Planos e precos* — _planos_\n📊 *Resumo da conta* — _resumo_`
     ))
+    responses.push(msg('buttons', 'Escolha uma opcao:', undefined, [
+      { label: '💰 Consultar Preco', value: 'ABC1D23' },
+      { label: '🔎 Buscar Estoque', value: 'quero HB20 2021+' },
+      { label: '📦 Cadastrar Veiculo', value: 'tenho Civic 2020, 52k km, R$ 98k' },
+      { label: '📋 Ver Planos', value: 'planos' },
+    ]))
     return responses
   }
 
@@ -441,6 +482,11 @@ export function processMessage(text: string): Message[] {
 
     responses.push(msg('text', `🔍 Consultando DETRAN, DENATRAN, restricoes judiciais e financeiras para *${plate}*...`))
     responses.push(msg('card-checklist', undefined, checklist))
+    responses.push(msg('buttons', 'O que deseja fazer agora?', undefined, [
+      { label: '💰 Nova consulta', value: 'GHI8J01' },
+      { label: '🔎 Buscar estoque', value: 'quero HB20 2021+' },
+      { label: '📊 Meu resumo', value: 'resumo' },
+    ]))
     return responses
   }
 
@@ -455,6 +501,10 @@ export function processMessage(text: string): Message[] {
     state.awaitingConfirmation = 'intent'
     state.pendingData = intent
     responses.push(msg('card-intent-confirm', undefined, intent))
+    responses.push(msg('buttons', 'Confirmar cadastro da busca?', undefined, [
+      { label: '✅ Sim, cadastrar', value: 'sim' },
+      { label: '❌ Cancelar', value: 'nao' },
+    ]))
     return responses
   }
 
@@ -469,6 +519,10 @@ export function processMessage(text: string): Message[] {
     state.awaitingConfirmation = 'rede'
     state.pendingData = vehicle
     responses.push(msg('card-rede', undefined, vehicle))
+    responses.push(msg('buttons', 'Confirmar cadastro na rede?', undefined, [
+      { label: '✅ Sim, cadastrar', value: 'sim' },
+      { label: '❌ Cancelar', value: 'nao' },
+    ]))
     return responses
   }
 
@@ -484,8 +538,13 @@ export function processMessage(text: string): Message[] {
     // Check free queries
     if (state.plan === 'free') {
       if (state.freeQueries <= 0) {
-        responses.push(msg('text', `⚠️ Voce ja usou suas *3 consultas gratis*.\n\nPara continuar, escolha um plano:`))
+        responses.push(msg('text', `⚠️ Voce ja usou suas *3 consultas gratis*.`))
         responses.push(msg('card-plans'))
+        responses.push(msg('buttons', 'Escolha um plano para continuar:', undefined, [
+          { label: '⭐ Starter — R$ 97', value: 'assinar starter' },
+          { label: '🏆 Pro — R$ 197', value: 'assinar pro' },
+          { label: '🏢 Loja — R$ 397', value: 'assinar loja' },
+        ]))
         return responses
       }
       state.freeQueries--
@@ -498,11 +557,23 @@ export function processMessage(text: string): Message[] {
     responses.push(msg('text', `📊 Analisando *${plateClean}*...\nColetando dados: FIPE, OLX, Webmotors, iCarros, DETRAN...`))
     responses.push(msg('card-pricing', undefined, vehicle))
 
-    // After pricing, show remaining queries
     if (state.plan === 'free' && state.freeQueries > 0) {
-      responses.push(msg('text', `Voce tem *${state.freeQueries} consulta${state.freeQueries > 1 ? 's' : ''} gratis* restante${state.freeQueries > 1 ? 's' : ''}.\n\nEnvie outra placa ou digite *checklist ${plateClean}* para verificar pendencias.`))
+      responses.push(msg('buttons', `*${state.freeQueries}* consulta${state.freeQueries > 1 ? 's' : ''} gratis restante${state.freeQueries > 1 ? 's' : ''}.`, undefined, [
+        { label: '🔍 Checklist ' + plateClean, value: 'checklist ' + plateClean },
+        { label: '💰 Nova consulta', value: 'GHI8J01' },
+        { label: '🔎 Buscar estoque', value: 'quero HB20 2021+' },
+      ]))
     } else if (state.plan === 'free' && state.freeQueries === 0) {
-      responses.push(msg('text', `Essa foi sua *ultima consulta gratis*! 🎯\n\nGostou? Veja nossos planos a partir de *R$ 97/mes* com 30 consultas inclusas.\n\nDigite *planos* para ver as opcoes ou continue avulso por *R$ 4,90/consulta*.`))
+      responses.push(msg('buttons', `Essa foi sua *ultima consulta gratis*! 🎯\nGostou? Planos a partir de *R$ 97/mes*.`, undefined, [
+        { label: '📋 Ver planos', value: 'planos' },
+        { label: '🔍 Checklist ' + plateClean, value: 'checklist ' + plateClean },
+      ]))
+    } else {
+      responses.push(msg('buttons', 'O que deseja fazer agora?', undefined, [
+        { label: '🔍 Checklist ' + plateClean, value: 'checklist ' + plateClean },
+        { label: '💰 Nova consulta', value: 'GHI8J01' },
+        { label: '🔎 Buscar estoque', value: 'quero HB20 2021+' },
+      ]))
     }
 
     return responses
@@ -513,8 +584,12 @@ export function processMessage(text: string): Message[] {
   if (vehicleMatch) {
     if (state.plan === 'free') {
       if (state.freeQueries <= 0) {
-        responses.push(msg('text', `⚠️ Voce ja usou suas *3 consultas gratis*. Digite *planos* para continuar.`))
+        responses.push(msg('text', `⚠️ Consultas gratis esgotadas.`))
         responses.push(msg('card-plans'))
+        responses.push(msg('buttons', 'Escolha um plano:', undefined, [
+          { label: '⭐ Starter — R$ 97', value: 'assinar starter' },
+          { label: '🏆 Pro — R$ 197', value: 'assinar pro' },
+        ]))
         return responses
       }
       state.freeQueries--
@@ -527,8 +602,16 @@ export function processMessage(text: string): Message[] {
     responses.push(msg('text', `🔎 Encontrei: *${vehicleMatch.brand} ${vehicleMatch.model} ${vehicleMatch.version}*\nPlaca de referencia: ${vehicleMatch.plate}\n\nAnalisando mercado...`))
     responses.push(msg('card-pricing', undefined, vehicleMatch))
 
-    if (state.plan === 'free' && state.freeQueries >= 0) {
-      responses.push(msg('text', `${state.freeQueries > 0 ? `*${state.freeQueries}* consulta${state.freeQueries > 1 ? 's' : ''} gratis restante${state.freeQueries > 1 ? 's' : ''}.` : 'Essa foi sua *ultima consulta gratis*! Digite *planos* para continuar.'}\n\nDigite *checklist ${vehicleMatch.plate}* para ver pendencias documentais.`))
+    if (state.plan === 'free' && state.freeQueries > 0) {
+      responses.push(msg('buttons', `*${state.freeQueries}* consulta${state.freeQueries > 1 ? 's' : ''} gratis restante${state.freeQueries > 1 ? 's' : ''}.`, undefined, [
+        { label: '🔍 Checklist ' + vehicleMatch.plate, value: 'checklist ' + vehicleMatch.plate },
+        { label: '💰 Nova consulta', value: 'XYZ4E56' },
+      ]))
+    } else if (state.plan === 'free') {
+      responses.push(msg('buttons', `Ultima consulta gratis usada! 🎯`, undefined, [
+        { label: '📋 Ver planos', value: 'planos' },
+        { label: '🔍 Checklist ' + vehicleMatch.plate, value: 'checklist ' + vehicleMatch.plate },
+      ]))
     }
 
     return responses
@@ -538,25 +621,41 @@ export function processMessage(text: string): Message[] {
   if (lower.includes('assinar starter') || lower === 'starter') {
     state.plan = 'starter'
     state.freeQueries = 30
-    responses.push(msg('text', `✅ *Plano Starter ativado!*\n\n30 consultas/mes\nChecklist completo\nHistorico 30 dias\n\nEnvie uma placa para comecar!`))
+    responses.push(msg('buttons', `✅ *Plano Starter ativado!*\n\n30 consultas/mes · Checklist completo · Historico 30 dias`, undefined, [
+      { label: '💰 Consultar preco', value: 'ABC1D23' },
+      { label: '🔎 Buscar estoque', value: 'quero HB20 2021+' },
+    ]))
     return responses
   }
   if (lower.includes('assinar pro') || lower === 'profissional' || lower === 'pro') {
     state.plan = 'profissional'
     state.freeQueries = 80
-    responses.push(msg('text', `✅ *Plano Profissional ativado!*\n\n80 consultas/mes\nChecklist + Laudo PDF\nHistorico 90 dias\n3 alertas ativos\n\nEnvie uma placa para comecar!`))
+    responses.push(msg('buttons', `✅ *Plano Profissional ativado!*\n\n80 consultas/mes · Laudo PDF · 3 alertas ativos`, undefined, [
+      { label: '💰 Consultar preco', value: 'ABC1D23' },
+      { label: '🔎 Buscar estoque', value: 'quero HB20 2021+' },
+      { label: '📦 Cadastrar veiculo', value: 'tenho Civic 2020, 52k km, R$ 98k' },
+    ]))
     return responses
   }
   if (lower.includes('assinar loja') || lower === 'loja') {
     state.plan = 'loja'
     state.freeQueries = 200
-    responses.push(msg('text', `✅ *Plano Loja ativado!*\n\n200 consultas/mes\nMulti-usuario ilimitado\nRede completa + cadastro estoque\nDashboard web + API beta\n\nEnvie uma placa para comecar!`))
+    responses.push(msg('buttons', `✅ *Plano Loja ativado!*\n\n200 consultas/mes · Multi-usuario · Rede completa · API beta`, undefined, [
+      { label: '💰 Consultar preco', value: 'ABC1D23' },
+      { label: '🔎 Buscar estoque', value: 'quero HB20 2021+' },
+      { label: '📦 Cadastrar veiculo', value: 'tenho Civic 2020, 52k km, R$ 98k' },
+    ]))
     return responses
   }
 
   // Fallback
-  responses.push(msg('text',
-    `Nao entendi 😅 Tente assim:\n\n💰 *Consulta Preco* — envie uma placa (ex: _ABC1D23_)\n🔎 *Busca Estoque* — _quero HB20 2021+_\n📦 *Cadastrar Veiculo* — _tenho Civic 2020, 52k km, R$ 98k_\n\nOu digite *ajuda* para ver todas as opcoes.`
+  responses.push(msg('buttons',
+    `Nao entendi 😅 Escolha uma opcao:`, undefined, [
+      { label: '💰 Consultar Preco', value: 'ABC1D23' },
+      { label: '🔎 Buscar Estoque', value: 'quero HB20 2021+' },
+      { label: '📦 Cadastrar Veiculo', value: 'tenho Civic 2020, 52k km, R$ 98k' },
+      { label: '❓ Ajuda', value: 'ajuda' },
+    ]
   ))
 
   return responses

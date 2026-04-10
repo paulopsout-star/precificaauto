@@ -209,7 +209,7 @@ function IntentConfirmCard({ data }: { data: IntentData }) {
         <div className="flex justify-between"><span className="text-gray-500">Validade</span><span className="font-medium">30 dias</span></div>
       </div>
       <div className="px-4 py-2 bg-blue-50 text-[11px] text-blue-700">
-        Responda *sim* para confirmar ou *nao* para cancelar
+        Confirme abaixo para ativar o monitoramento
       </div>
     </div>
   )
@@ -232,7 +232,7 @@ function RedeConfirmCard({ data }: { data: RedeVehicle }) {
         <div className="flex justify-between"><span className="text-gray-500">TTL</span><span className="font-medium">30 dias</span></div>
       </div>
       <div className="px-4 py-2 bg-brand-50 text-[11px] text-brand-700">
-        Responda *sim* para confirmar ou *nao* para cancelar
+        Confirme abaixo para cadastrar na rede
       </div>
     </div>
   )
@@ -289,8 +289,16 @@ function SummaryCard({ data }: { data: any }) {
 }
 
 // ─── Message Bubble ───
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({ message, onSend, isLast }: { message: Message; onSend: (text: string) => void; isLast: boolean }) {
   const isBot = message.from === 'bot'
+
+  const renderText = (text: string) => (
+    <p className="text-[13px] leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{
+      __html: text
+        .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+        .replace(/_(.*?)_/g, '<em style="color:#6b7280">$1</em>')
+    }} />
+  )
 
   const renderContent = () => {
     switch (message.type) {
@@ -301,6 +309,32 @@ function MessageBubble({ message }: { message: Message }) {
       case 'card-rede': return <RedeConfirmCard data={message.data} />
       case 'card-plans': return <PlansCard />
       case 'card-summary': return <SummaryCard data={message.data} />
+      case 'buttons':
+        return (
+          <div>
+            {message.text && renderText(message.text)}
+            {message.buttons && isLast && (
+              <div className="flex flex-col gap-1.5 mt-2.5 pt-2.5 border-t border-gray-100">
+                {message.buttons.map((btn) => (
+                  <button
+                    key={btn.value}
+                    onClick={() => onSend(btn.value)}
+                    className="w-full py-2 px-3 text-[13px] font-medium text-[#075e54] bg-white border border-[#d1f4e0] rounded-lg hover:bg-[#d1f4e0] transition-colors text-center active:scale-[0.98]"
+                  >
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {message.buttons && !isLast && (
+              <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100">
+                {message.buttons.map((btn) => (
+                  <span key={btn.value} className="text-[10px] text-gray-400 italic">{btn.label}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )
       case 'typing':
         return (
           <div className="flex gap-1 px-2 py-1">
@@ -310,11 +344,7 @@ function MessageBubble({ message }: { message: Message }) {
           </div>
         )
       default:
-        return (
-          <p className="text-[13px] leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{
-            __html: (message.text || '').replace(/\*(.*?)\*/g, '<strong>$1</strong>')
-          }} />
-        )
+        return renderText(message.text || '')
     }
   }
 
@@ -367,7 +397,7 @@ function QuickChips({ onSend }: { onSend: (text: string) => void }) {
 export default function WhatsAppChat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
-  const [showChips, setShowChips] = useState(true)
+  const [_showChips] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -396,7 +426,6 @@ export default function WhatsAppChat() {
 
     setMessages((prev) => [...prev, userMsg])
     setInput('')
-    setShowChips(false)
 
     // Show typing indicator
     const typingMsg: Message = {
@@ -476,14 +505,14 @@ export default function WhatsAppChat() {
           </span>
         </div>
 
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
+        {messages.map((msg, i) => (
+          <MessageBubble key={msg.id} message={msg} onSend={sendMessage} isLast={i === messages.length - 1} />
         ))}
         <div ref={bottomRef} />
       </div>
 
       {/* Quick chips */}
-      {showChips && (
+      {_showChips && (
         <div className="bg-[#efeae2] border-t border-gray-200">
           <QuickChips onSend={sendMessage} />
         </div>
